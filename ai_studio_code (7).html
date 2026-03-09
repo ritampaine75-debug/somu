@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Premium Admin Gallery</title>
+    <link rel="manifest" id="pwa-manifest">
+    <meta name="theme-color" content="#0B0F19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #0B0F19;
+            --surface: #151A27;
+            --primary: #6366f1;
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --secondary: #14b8a6;
+            --text-main: #F3F4F6;
+            --text-dim: #9CA3AF;
+            --error: #ef4444;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        html, body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background-color: var(--bg);
+            color: var(--text-main);
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto; 
+            display: none; 
+            box-sizing: border-box;
+            background-color: var(--bg);
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: block;
+            z-index: 10;
+            animation: screenFadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes screenFadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 90%;
+            max-width: 400px;
+            pointer-events: none;
+        }
+        .toast {
+            background: rgba(21, 26, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: slideDown 0.3s ease forwards;
+            display: flex;
+            align-items: center;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Login Screen Layout */
+        #login-screen {
+            display: flex; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-card { 
+            background: var(--surface); 
+            padding: 40px 30px; 
+            border-radius: 24px; 
+            width: 100%; 
+            max-width: 340px; 
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        .login-icon { width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
+        .login-icon svg { width: 30px; height: 30px; fill: white; }
+        
+        input {
+            width: 100%;
+            padding: 16px;
+            margin: 15px 0;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+            font-family: inherit;
+        }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--primary-gradient); color: white; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3); }
+        .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--border); margin-top: 10px; }
+        
+        .btn-action { background: rgba(255,255,255,0.1); color: white; padding: 10px 15px; font-size: 13px; border-radius: 8px; width: auto; flex: 1; }
+        .btn-delete { background: rgba(239, 68, 68, 0.1); color: var(--error); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        header {
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 { font-size: 18px; margin: 0; font-weight: 700; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-link { color: var(--text-main); background: none; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; padding: 0; }
+
+        .gallery-container { padding: 20px; padding-bottom: 100px; }
+        .gallery-grid { display: flex; flex-direction: column; gap: 25px; }
+        
+        .photo-item {
+            background: var(--surface);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .img-container { position: relative; width: 100%; padding-top: 100%; background: #000; }
+        .img-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .photo-info { padding: 18px; }
+        .photo-time { font-size: 13px; color: var(--text-dim); display: block; margin-bottom: 15px; font-weight: 500; }
+        .action-row { display: flex; gap: 10px; }
+
+        .settings-container { padding: 20px; padding-bottom: 100px; }
+        .settings-group { background: var(--surface); padding: 25px; border-radius: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .settings-group h3 { margin-top: 0; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+        .dev-info { font-size: 14px; line-height: 1.8; color: var(--text-main); }
+        .dev-info span { color: var(--text-dim); }
+
+        #loading-text { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 15px; }
+        .loader { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- GET APP BANNER CSS --- */
+        #install-banner {
+            position: fixed;
+            bottom: -120px; /* Hidden off-screen initially */
+            left: 0;
+            width: 100%;
+            background: rgba(21, 26, 39, 0.98);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 99999;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+            transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #install-banner.show {
+            bottom: 0;
+        }
+        .install-info { display: flex; align-items: center; gap: 12px; }
+        .install-icon { width: 45px; height: 45px; background: var(--primary-gradient); border-radius: 12px; display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 22px; color: white; }
+        .install-text h4 { margin: 0; font-size: 15px; color: white; letter-spacing: 0.5px;}
+        .install-text p { margin: 3px 0 0 0; font-size: 12px; color: var(--text-dim); }
+        .install-actions { display: flex; align-items: center; gap: 12px; }
+        .btn-get { background: var(--text-main); color: var(--bg); border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-get:active { transform: scale(0.95); }
+        .btn-close { background: transparent; color: var(--text-dim); border: none; font-size: 24px; line-height: 1; padding: 0; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <!-- GET APP BANNER (Auto Popup) -->
+    <div id="install-banner">
+        <div class="install-info">
+            <div class="install-icon">G</div>
+            <div class="install-text">
+                <h4>Gallery Pro</h4>
+                <p>Install the official app</p>
+            </div>
+        </div>
+        <div class="install-actions">
+            <button class="btn-get" onclick="triggerInstall()">GET APP</button>
+            <button class="btn-close" onclick="closeInstallBanner()">&times;</button>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <div class="login-card">
+            <div class="login-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C9.243 2 7 4.243 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.757-2.243-5-5-5zM9 7c0-1.654 1.346-3 3-3s3 1.346 3 3v3H9V7zm7 12H8v-6h8v6z"/></svg>
+            </div>
+            <h2 style="margin:0 0 5px 0; font-size: 22px;">Admin Portal</h2>
+            <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 25px;">Secure access required</p>
+            <input type="password" id="passInput" placeholder="Enter Password">
+            <button class="btn btn-primary" onclick="attemptLogin()" id="loginBtn">
+                <span id="loginBtnText">UNLOCK ACCESS</span>
+                <div class="loader" id="loginLoader"></div>
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. MAIN GALLERY SCREEN -->
+    <div id="main-screen" class="screen">
+        <header>
+            <h1>Gallery Pro</h1>
+            <button class="nav-link" onclick="switchScreen('settings-screen')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </header>
+        <div class="gallery-container">
+            <div id="loading-text">
+                <div class="loader" style="display: inline-block; border-color: var(--primary); border-top-color: transparent; margin-bottom: 10px;"></div>
+                <br>Syncing with Database...
+            </div>
+            <div id="gallery" class="gallery-grid"></div>
+        </div>
+    </div>
+
+    <!-- 3. SETTINGS SCREEN -->
+    <div id="settings-screen" class="screen">
+        <header>
+            <button class="nav-link" onclick="switchScreen('main-screen')">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <h1>Settings</h1>
+            <div style="width: 24px;"></div>
+        </header>
+        
+        <div class="settings-container">
+            <div class="settings-group">
+                <h3>Security</h3>
+                <input type="text" id="newPassInput" placeholder="Enter New Password">
+                <button class="btn btn-primary" onclick="updatePassword()">Update Password</button>
+            </div>
+
+            <div class="settings-group">
+                <h3>System Optimization</h3>
+                <p style="font-size: 13px; color: var(--text-dim); margin-top: 0;">Install app to home screen for native full-screen performance.</p>
+                <button class="btn btn-secondary" onclick="triggerInstall()">Install Web App</button>
+            </div>
+
+            <div class="settings-group">
+                <h3>Developer Info</h3>
+                <div class="dev-info">
+                    <span>Developer:</span> RITAM PAINE<br>
+                    <span>Instagram:</span> @ritam_2024_0<br>
+                    <span>Version:</span> Premium Admin v5.0
+                </div>
+            </div>
+
+            <button class="btn btn-secondary" style="border-color: rgba(239, 68, 68, 0.3); color: var(--error);" onclick="location.reload()">Secure Logout</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, get, set, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKC5znAlxRW77hXi1Pk0JvAy7vAXurU9w",
+            authDomain: "tournament-pro-7640a.firebaseapp.com",
+            databaseURL: "https://tournament-pro-7640a-default-rtdb.firebaseio.com",
+            projectId: "tournament-pro-7640a",
+            storageBucket: "tournament-pro-7640a.firebasestorage.app",
+            messagingSenderId: "1033810183760",
+            appId: "1:1033810183760:web:2e3376b78d95b8a280b355"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        let deferredPrompt;
+
+        // --- PWA AUTO INSTALL BANNER LOGIC ---
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // ব্রাউজারের ডিফল্ট প্রম্পট হাইড করে
+            deferredPrompt = e;
+            // ওয়েবসাইট খোলার ১ সেকেন্ড পর নিচ থেকে ব্যানারটি উঠবে
+            setTimeout(() => {
+                document.getElementById('install-banner').classList.add('show');
+            }, 1000);
+        });
+
+        window.closeInstallBanner = () => {
+            document.getElementById('install-banner').classList.remove('show');
+        };
+
+        window.triggerInstall = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt(); // সিস্টেমের আসল ইন্সটল উইন্ডো ওপেন করবে
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User installed the app');
+                }
+                deferredPrompt = null;
+                closeInstallBanner(); // ইন্সটল হয়ে গেলে ব্যানার হাইড করে দেবে
+            } else {
+                showToast("App already installed or browser unsupported", "error");
+            }
+        };
+
+        // --- CORE NAVIGATION SYSTEM ---
+        window.switchScreen = (screenId) => {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+                if(screen.id !== screenId) screen.scrollTop = 0; 
+            });
+            document.getElementById(screenId).classList.add('active');
+        };
+
+        window.showToast = (msg, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            const color = type === 'error' ? 'var(--error)' : 'var(--secondary)';
+            toast.innerHTML = `<span style="color: ${color}; margin-right: 10px;">●</span> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideDown 0.3s ease reverse forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.attemptLogin = async () => {
+            const input = document.getElementById('passInput').value;
+            const btnText = document.getElementById('loginBtnText');
+            const loader = document.getElementById('loginLoader');
+            
+            if(!input) return showToast("Please enter a password", "error");
+
+            btnText.style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const passRef = ref(db, "admin/password");
+                const snapshot = await get(passRef);
+                const correctPass = snapshot.val() || "123456";
+
+                if (input === correctPass) {
+                    showToast("Access Granted");
+                    switchScreen('main-screen');
+                    loadPhotos();
+                } else {
+                    showToast("Access Denied: Invalid Password", "error");
+                }
+            } catch (e) {
+                if(input === "123456") {
+                    showToast("Access Granted (Default)");
+                    switchScreen('main-screen');
+                    loadPhotos();
+                } else {
+                    showToast("Connection Error", "error");
+                }
+            } finally {
+                btnText.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        };
+
+        function loadPhotos() {
+            const photosRef = ref(db, "photos");
+            onValue(photosRef, (snapshot) => {
+                const container = document.getElementById("gallery");
+                const loader = document.getElementById("loading-text");
+                container.innerHTML = "";
+                const data = snapshot.val();
+
+                if (data) {
+                    loader.style.display = "none";
+                    const arr = Object.keys(data).map(key => ({
+                        id: key,
+                        ...data[key]
+                    })).sort((a,b) => b.timestamp - a.timestamp);
+                    
+                    arr.forEach(photo => {
+                        const dateObj = new Date(photo.timestamp);
+                        const timeStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + " at " + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        const div = document.createElement("div");
+                        div.className = "photo-item";
+                        div.innerHTML = `
+                            <div class="img-container">
+                                <img src="${photo.url}" loading="lazy" alt="Captured Photo">
+                            </div>
+                            <div class="photo-info">
+                                <span class="photo-time">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    ${timeStr}
+                                </span>
+                                <div class="action-row">
+                                    <button class="btn btn-action btn-delete" onclick="deleteImg('${photo.id}')">Delete</button>
+                                    <button class="btn btn-action" onclick="downloadImg('${photo.url}')">Download</button>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    loader.style.display = "block";
+                    loader.innerHTML = "No photos found in database.";
+                }
+            });
+        }
+
+        window.downloadImg = async (url) => {
+            showToast("Preparing download...");
+            try {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const bUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = bUrl;
+                a.download = `Gallery_Pro_${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (e) { 
+                window.open(url, '_blank');
+                showToast("Opened in new tab. Long press to save.");
+            }
+        };
+
+        window.deleteImg = async (id) => {
+            if(confirm("Are you sure you want to permanently delete this photo?")) {
+                try {
+                    await remove(ref(db, `photos/${id}`));
+                    showToast("Photo deleted successfully");
+                } catch(e) {
+                    showToast("Failed to delete photo", "error");
+                }
+            }
+        };
+
+        window.updatePassword = async () => {
+            const newPass = document.getElementById('newPassInput').value;
+            if (newPass.length < 5) return showToast("Password must be at least 5 chars", "error");
+            try {
+                await set(ref(db, "admin/password"), newPass);
+                showToast("Password Updated Successfully");
+                document.getElementById('newPassInput').value = "";
+            } catch(e) {
+                showToast("Failed to update password", "error");
+            }
+        };
+
+        try {
+            const swCode = `self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));`;
+            const swBlob = new Blob([swCode], { type: 'application/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob));
+        } catch(e) {}
+
+        const manifest = {
+            "name": "Gallery Pro Admin",
+            "short_name": "GalleryPro",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#0B0F19",
+            "theme_color": "#0B0F19",
+            "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/1375/1375106.png", "sizes": "512x512", "type": "image/png"}]
+        };
+        document.getElementById('pwa-manifest').setAttribute('href', URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/json'})));
+    </script>
+</body>
+</html>
